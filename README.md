@@ -56,6 +56,18 @@ to compare them (paddy x 0.67 to milled rice; cotton not comparable: seed cotton
 | `crop_price_clusters.csv` | k-means (k = 4) of 217 commodities by typical monthly price move, seasonal spread and peak-month arrival share |
 | `INSIGHTS.md` | headline tables from all of the above |
 
+## Workbooks and blog charts
+
+Scripts that rebuild the Excel workbooks and SVG charts behind the masaladeutsch posts of 24 October 2026
+(all read only from `data/` and `reports/`; workbook formulas recalculate in Excel or LibreOffice):
+
+| Script | Output |
+|---|---|
+| `analysis/workbooks/statewise_rice_maize.py out.xlsx` | state-wise maize, rice and broken-rice prices: seasonality, dip months, six-month carry test, spread vs all-India |
+| `analysis/workbooks/crop_ranking.py out.xlsx out.json` | 23 crops x state: arrivals, typical monthly price move, trimmed price range, ranks |
+| `analysis/workbooks/mandi_leaders.py out.xlsx out.json` | top mandis nationally, per crop, per state and per state-crop (from the market sample) |
+| `analysis/post_charts.py states.geojson outdir/` | the seven charts of "India's Farm Map in Seven Charts" (area, yields, state maps, k-means maps and scatter, seasonality, urea vs yield); boundaries from [DataMeet](https://github.com/datameet/maps) |
+
 ## Running it
 
 ```bash
