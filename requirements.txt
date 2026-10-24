@@ -1,0 +1,4 @@
+# Collectors (collectors/, indiagri/) use only the Python standard library.
+# Analysis (analysis/) needs:
+pandas>=2.0
+numpy>=1.24

@@ -1,0 +1,31 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile all code
+        run: python -m compileall -q indiagri collectors analysis
+      - name: Data files are readable gzip CSV with a header
+        run: |
+          python - <<'EOF'
+          import csv, gzip, pathlib, sys
+          bad = []
+          for f in pathlib.Path("data").rglob("*.csv.gz"):
+              try:
+                  with gzip.open(f, "rt", encoding="utf-8") as fh:
+                      r = csv.reader(fh); header = next(r); next(r)
+              except Exception as e:
+                  bad.append(f"{f}: {e}")
+          for f in pathlib.Path("crosswalks").glob("*.csv"):
+              list(csv.DictReader(open(f, encoding="utf-8")))
+          print("\n".join(bad) or "all data files OK"); sys.exit(1 if bad else 0)
+          EOF

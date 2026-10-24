@@ -1,0 +1,24 @@
+agmarknet_id,agmarknet_commodity,upag_apy_crop,upag_msp_crop,upag_wpi_crop,msp_season,arrival_to_production_factor,note
+1,Wheat,Wheat,Wheat,Wheat,Rabi,1,
+2,Paddy(Common),Rice,Paddy Common,Paddy,Kharif,0.67,UPAG rice production is milled rice; paddy arrivals x 0.67 (standard out-turn) to compare
+3,Rice,Rice,,Rice,,1,Mandi rice is already milled; add to paddy x 0.67 for the rice share
+4,Maize,Maize,Maize,Maize,Kharif,1,
+5,Jowar(Sorghum),Jowar,Jowar-Hybrid,Jowar,Kharif,1,
+6,Bengal Gram(Gram)(Whole),Gram,Gram,Gram,Rabi,1,
+8,Black Gram(Urd Beans)(Whole),Urad,Urad,Urad,Kharif,1,
+9,Green Gram(Moong)(Whole),Moong,Moong,Moong,Kharif,1,
+10,Groundnut,Groundnut,Groundnut,Groundnut,Kharif,1,Mandi groundnut is mostly pods; APY production is pods
+12,Mustard,Rapeseed & Mustard,Rapeseed/ mustard,Rapeseed & Mustard,Rabi,1,
+13,Soyabean,Soybean,Soyabean Yellow,Soybean,Kharif,1,
+15,Cotton,Cotton,Medium Staple Cotton,Cotton,Kharif,,Mandi cotton is seed cotton (kapas) in tonnes; APY is lint in 170 kg bales. Not directly comparable
+23,Onion,,,Onion,,,No UPAG APY series (horticulture)
+24,Potato,,,Potato,,,No UPAG APY series (horticulture)
+25,Garlic,,,,,,
+28,Bajra(Pearl Millet/Cumbu),Bajra,Bajra,Bajra,Kharif,1,
+30,Ragi(Finger Millet),Ragi,Ragi,Ragi,Kharif,1,
+35,Turmeric,,,,,,
+38,Cummin Seed(Jeera),,,,,,
+45,Red gram/Arhar/Tur(whole),Tur,Tur (Arhar),Tur,Kharif,1,
+52,Lentil(Masur)(Whole),Lentil,Lentil (Masur),Lentil,Rabi,1,
+65,Tomato,,,Tomato,,,No UPAG APY series (horticulture)
+113,Dry Chillies,,,,,,
