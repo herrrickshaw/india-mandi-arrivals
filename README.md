@@ -53,6 +53,7 @@ to compare them (paddy x 0.67 to milled rice; cotton not comparable: seed cotton
 | `area_by_crop.csv` | all-India area by crop, latest year vs ten years earlier |
 | `top_mandis.csv` | estimated annual arrivals per mandi and its main crop |
 | `state_crop_clusters.csv`, `state_cluster_centroids.csv` | k-means (k = 5) of states by crop-area mix, latest three crop years (`analysis/clusters.py`) |
+| `crop_profiles.csv`, `crop_top_states.csv`, `crop_top_districts.csv`, `crop_state_yield_gaps.csv` | 16 crops: production, area and yield growth 2003-06 to 2023-26 split into area and yield, year-on-year volatility, records, top states and districts, state yield gaps (`analysis/crop_profiles.py`; charts via `analysis/crop_charts.py outdir/`) |
 | `crop_price_clusters.csv` | k-means (k = 4) of 217 commodities by typical monthly price move, seasonal spread and peak-month arrival share |
 | `INSIGHTS.md` | headline tables from all of the above |
 
@@ -75,7 +76,7 @@ python3 collectors/agmarknet_collect.py masters
 python3 collectors/agmarknet_collect.py state-monthly --from 2019-01 --to 2026-10
 python3 collectors/agmarknet_collect.py market-sample --from 2025-11-01 --to 2026-10-23 --step 6
 python3 collectors/upag_collect.py all
-pip install -r requirements.txt && python analysis/build_insights.py && python analysis/clusters.py
+pip install -r requirements.txt && python analysis/build_insights.py && python analysis/clusters.py && python analysis/crop_profiles.py
 ```
 
 Collectors need only the Python standard library. Responses are cached under `.cache/` (gitignored), so
