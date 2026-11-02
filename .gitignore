@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 *.duckdb
 .DS_Store
+.venv/
+.pytest_cache/
+.ruff_cache/
