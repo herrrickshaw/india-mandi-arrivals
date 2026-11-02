@@ -14,6 +14,11 @@ jobs:
           python-version: "3.12"
       - name: Compile all code
         run: python -m compileall -q indiagri collectors analysis
+      - name: Lint and unit tests (offline)
+        run: |
+          pip install -q pytest ruff
+          ruff check indiagri collectors tests
+          pytest -q
       - name: Data files are readable gzip CSV with a header
         run: |
           python - <<'EOF'
