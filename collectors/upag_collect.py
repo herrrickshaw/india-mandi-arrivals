@@ -24,7 +24,7 @@ def call(name, fn, *a, **k):
             try:
                 time.sleep(1.0)
                 return fn(*a, **k)[1]
-            except Exception as e:                     # transient 5xx / timeouts
+            except Exception as e:  # noqa: BLE001 - any transient failure is retried, then logged and skipped
                 if i == 3:
                     print(f"  {name}: failed ({str(e)[:100]})"); return []
                 time.sleep(10 * (i + 1))

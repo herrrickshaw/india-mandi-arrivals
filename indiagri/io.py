@@ -1,9 +1,12 @@
 """Small stdlib helpers shared by the collectors: gzipped CSV output and a JSON response cache."""
+from __future__ import annotations
+
 import csv
 import gzip
 import hashlib
 import json
 import pathlib
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -13,13 +16,14 @@ CACHE = ROOT / ".cache"          # raw API responses, gitignored; makes every co
 PRIVATE_FIELDS = {"phone", "mobile", "email", "contact", "contact_person", "officer", "fax", "telephone"}
 
 
-def _flat(v):
+def _flat(v: Any) -> Any:
+    """Serialise dict/list cells as compact JSON so they fit in one CSV column."""
     if isinstance(v, (dict, list)):
         return json.dumps(v, ensure_ascii=False, separators=(",", ":"))
     return v
 
 
-def write_rows(path, rows, fields=None):
+def write_rows(path: str, rows: Iterable[Dict[str, Any]], fields: Optional[Sequence[str]] = None) -> int:
     """Write dict rows to a .csv.gz (columns = union of keys in first-seen order). Returns row count."""
     path = DATA / path
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,12 +42,13 @@ def write_rows(path, rows, fields=None):
     return len(rows)
 
 
-def read_rows(path):
+def read_rows(path: str) -> List[Dict[str, str]]:
+    """Read a .csv.gz under data/ back into a list of dicts (all values are strings)."""
     with gzip.open(DATA / path, "rt", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
 
 
-def cached(name, fn):
+def cached(name: str, fn: Callable[[], Any]) -> Any:
     """Return fn() result, caching JSON under .cache/<name>.json so reruns skip finished calls."""
     CACHE.mkdir(exist_ok=True)
     safe = name if len(name) < 120 else hashlib.sha1(name.encode()).hexdigest()
