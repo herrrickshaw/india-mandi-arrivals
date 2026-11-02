@@ -8,7 +8,7 @@ Rules baked in:
 Endpoints that return 403 "Authorization header missing" or 400
 "TOKEN_OR_CAPTCHA_REQUIRED" are deliberately NOT wrapped.
 
-Run `python3 -I agmarknet_client.py [samples_dir]` for a one-call-per-endpoint smoke test.
+Run `python3 -I -m indiagri.agmarknet [samples_dir]` for a one-call-per-endpoint smoke test.
 """
 from __future__ import annotations
 

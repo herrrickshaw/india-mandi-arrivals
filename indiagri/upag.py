@@ -9,7 +9,7 @@ Two public, unauthenticated backends:
 
 The official "Open API" (https://data.upag.gov.in/api/v1/...) needs OAuth2 login -> not used here.
 
-Run:  python3 -I upag_client.py  [outdir]   (one call per dataset, saves raw JSON to samples/)
+Run:  python3 -I -m indiagri.upag [outdir]   (one call per dataset, saves raw JSON; live network)
 """
 from __future__ import annotations
 

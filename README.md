@@ -1,23 +1,82 @@
 # india-mandi-arrivals
 
-Open extracts of India's agricultural **mandi arrivals and prices** (Agmarknet) joined with official
-**crop area, production, yield, MSP, procurement, prices and trade** (UPAG). Every dataset here is
-pulled from public, login-free endpoints of the two government portals by small, resumable,
-stdlib-only collectors, and analysis scripts turn them into insight tables.
+Open extracts of India's agricultural **mandi arrivals and prices** (Agmarknet) joined with official **crop area,
+production, yield, MSP, procurement, prices and trade** (UPAG), plus the stdlib-only collectors that fetch them and
+the analysis scripts that turn them into insight tables (CSV, `reports/INSIGHTS.md`), Excel workbooks and SVG charts.
 
-- **Agmarknet** (Directorate of Marketing & Inspection): what reaches regulated wholesale markets
-  (APMCs/mandis), and at what price, by market, district, state and day.
-- **UPAG** (Unified Portal for Agricultural Statistics, Dept. of Agriculture & Farmers Welfare): what
-  was grown (area, production, yield by state and district), MSP, WPI, FCI procurement, trade and the
-  crop calendar.
+> Status: active. Data is an unofficial point-in-time extract of Government of India open data (GODL-India);
+> check figures against the portals before relying on them. Not investment or policy advice.
 
-Joining them answers questions neither portal answers alone: how much of a state's output passes
-through mandis, how often mandi prices sit below MSP, which crops and states have the steadiest and
-most volatile prices, and which mandis dominate each crop. See [`reports/INSIGHTS.md`](reports/INSIGHTS.md).
+## What it does
+- Collects Agmarknet masters, state x commodity x month prices and arrivals, and a sampled market x day panel.
+- Collects UPAG area/production/yield (state, district, all-India), MSP, WPI, FCI procurement, trade and the crop calendar.
+- Joins the two to show how much of a state's output passes through mandis, how often mandi prices sit below MSP,
+  which crops and states have the steadiest and most volatile prices, and which mandis dominate each crop.
+- Clusters states by crop-area mix and commodities by price behaviour (k-means); builds 16 crop profiles.
+- Rebuilds the Excel workbooks and charts behind the masaladeutsch posts of 24 October 2026.
 
-## What's in `data/` (canonical files)
+## Quick start
+```bash
+git clone https://github.com/herrrickshaw/india-mandi-arrivals.git
+cd india-mandi-arrivals
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt            # analysis only; collectors need just the standard library
+python analysis/build_insights.py          # writes reports/*.csv and reports/INSIGHTS.md from data/
+```
 
-Each file below is the one authoritative copy of that dataset in this repo; there are no duplicates.
+Refreshing the data from the portals (live network, resumable):
+```bash
+python3 collectors/agmarknet_collect.py masters
+python3 collectors/agmarknet_collect.py state-monthly --from 2019-01 --to 2026-10
+python3 collectors/agmarknet_collect.py market-sample --from 2025-11-01 --to 2026-10-23 --step 6
+python3 collectors/upag_collect.py all
+python analysis/clusters.py && python analysis/crop_profiles.py
+```
+
+## How it works
+| Stage | Module | Output |
+|---|---|---|
+| HTTP clients (throttled, 429 back-off) | `indiagri/agmarknet.py`, `indiagri/upag.py` | parsed JSON |
+| Pure row logic (merge, filter, de-duplicate) | `indiagri/transform.py` | row dicts |
+| Gzipped CSV writer and JSON response cache | `indiagri/io.py` | `data/**/*.csv.gz`, `.cache/` |
+| Collectors (CLI) | `collectors/agmarknet_collect.py`, `collectors/upag_collect.py` | `data/agmarknet/`, `data/upag/` |
+| Analysis | `analysis/build_insights.py`, `clusters.py`, `crop_profiles.py` | `reports/` |
+| Workbooks and charts | `analysis/workbooks/*.py`, `analysis/post_charts.py`, `analysis/crop_charts.py` | `.xlsx`, `.json`, `.svg` |
+
+Design notes:
+- Every API response is cached under `.cache/` (gitignored), so an interrupted run resumes.
+- Agmarknet returns HTTP 429 when called quickly: the client allows one request per 1.5 s and backs off.
+  A full `state-monthly` refresh takes about an hour.
+- Agmarknet arrival rows carry no `cmdt_id` (price rows do), so state-monthly rows are keyed on commodity name.
+  Dashboard paging uses a `page` field in the request body, not the query string.
+- UPAG reports are Plotly Dash pages; the collectors call their data callbacks directly. That is an internal UI
+  contract, so a redeploy of upag.gov.in can change it. Endpoint catalogues (parameters, coverage, how to
+  re-capture a callback) are in [`docs/agmarknet_api.md`](docs/agmarknet_api.md) and [`docs/upag_api.md`](docs/upag_api.md).
+- Endpoints that need a login or captcha (lot-wise trades, some reports) are deliberately not wrapped.
+- Fields naming officials or giving phone numbers or emails are dropped on write (`PRIVATE_FIELDS` in `indiagri/io.py`).
+
+## Repository layout
+| Path | Purpose |
+|---|---|
+| `indiagri/` | API clients, pure transforms and I/O helpers (stdlib only) |
+| `collectors/` | CLI collectors writing `data/` |
+| `analysis/` | Insight tables, clustering, crop profiles, `workbooks/` and chart scripts |
+| `data/` | Tracked gzipped CSV extracts (`agmarknet/`, `upag/`, `external/`) |
+| `crosswalks/` | Agmarknet to UPAG commodity and state name maps, with unit conversions |
+| `reports/` | Generated insight tables and `INSIGHTS.md` |
+| `docs/` | Endpoint catalogues for both portals |
+| `tests/` | Offline pytest suite |
+
+## Data sources
+| Source | What is taken | Access route | Licence / caveat |
+|---|---|---|---|
+| [Agmarknet](https://agmarknet.gov.in/) (Directorate of Marketing & Inspection) | Prices, arrivals, masters | Public JSON API, no login | GODL-India; scraped by collector |
+| [UPAG](https://upag.gov.in/) (Dept. of Agriculture & Farmers Welfare) | APY, MSP, WPI, FCI, trade, calendar | Public Dash callbacks and REST subset | GODL-India; scraped by collector |
+| Dept. of Fertilizers urea sales | `data/external/urea_state_2025_26.csv` | Tabulated in [this post](https://masaladeutsch.blogspot.com/2026/08/379-kilos-hectare-in-punjab-44-in.html) | Secondary source |
+| [DataMeet maps](https://github.com/datameet/maps) | State boundaries for `post_charts.py` | Supplied by the caller as a GeoJSON path | Not stored in repo |
+
+### Canonical data files
+Each file is the one authoritative copy of that dataset in this repo.
 
 | File | Source / report | Grain | Coverage |
 |---|---|---|---|
@@ -40,8 +99,10 @@ bales), area lakh hectares, yield kg/ha.
 `crosswalks/` maps Agmarknet commodity and state names to UPAG's, including the conversions needed
 to compare them (paddy x 0.67 to milled rice; cotton not comparable: seed cotton vs lint bales).
 
-## Insight tables (`reports/`)
+`crosswalks/` maps Agmarknet commodity and state names to UPAG's, including the conversions needed to compare
+them (paddy x 0.67 to milled rice; cotton not comparable: seed cotton vs lint bales).
 
+### Insight tables (`reports/`)
 `python analysis/build_insights.py` writes:
 
 | File | What it shows |
@@ -57,10 +118,8 @@ to compare them (paddy x 0.67 to milled rice; cotton not comparable: seed cotton
 | `crop_price_clusters.csv` | k-means (k = 4) of 217 commodities by typical monthly price move, seasonal spread and peak-month arrival share |
 | `INSIGHTS.md` | headline tables from all of the above |
 
-## Workbooks and blog charts
-
-Scripts that rebuild the Excel workbooks and SVG charts behind the masaladeutsch posts of 24 October 2026
-(all read only from `data/` and `reports/`; workbook formulas recalculate in Excel or LibreOffice):
+### Workbooks and blog charts
+Scripts read only from `data/` and `reports/`; workbook formulas recalculate in Excel or LibreOffice.
 
 | Script | Output |
 |---|---|
@@ -69,28 +128,20 @@ Scripts that rebuild the Excel workbooks and SVG charts behind the masaladeutsch
 | `analysis/workbooks/mandi_leaders.py out.xlsx out.json` | top mandis nationally, per crop, per state and per state-crop (from the market sample) |
 | `analysis/post_charts.py states.geojson outdir/` | the seven charts of "India's Farm Map in Seven Charts" (area, yields, state maps, k-means maps and scatter, seasonality, urea vs yield); boundaries from [DataMeet](https://github.com/datameet/maps) |
 
-## Running it
+## Configuration
+No environment variables and no credentials. Tunables are constants at the top of the modules:
+`MIN_INTERVAL`, `MAX_RETRIES`, `TIMEOUT` in `indiagri/agmarknet.py`; `BATCH_SIZE` and `CORE` (the 23 field crops
+used for the market sample) in `collectors/agmarknet_collect.py`. Raw responses are cached in `.cache/`.
 
+## Testing
 ```bash
-python3 collectors/agmarknet_collect.py masters
-python3 collectors/agmarknet_collect.py state-monthly --from 2019-01 --to 2026-10
-python3 collectors/agmarknet_collect.py market-sample --from 2025-11-01 --to 2026-10-23 --step 6
-python3 collectors/upag_collect.py all
-pip install -r requirements.txt && python analysis/build_insights.py && python analysis/clusters.py && python analysis/crop_profiles.py
+pip install pytest ruff
+ruff check indiagri collectors tests
+pytest -q
 ```
+The suite is offline: network calls are stubbed and no live portal is contacted.
 
-Collectors need only the Python standard library. Responses are cached under `.cache/` (gitignored), so
-an interrupted run resumes. Agmarknet returns HTTP 429 when called quickly: the client throttles to
-about one request every 1.5 s and backs off. A full refresh of `state-monthly` takes about an hour.
-
-Endpoint catalogues, with parameters, coverage and caveats, are in
-[`docs/agmarknet_api.md`](docs/agmarknet_api.md) and [`docs/upag_api.md`](docs/upag_api.md).
-UPAG's reports are Plotly Dash pages, and the collectors call their data callbacks directly. That is an
-internal UI contract, so a redeploy of upag.gov.in can change it; the catalogue explains how to
-re-capture a callback.
-
-## Caveats
-
+## Limitations and known issues
 - **Arrivals are what markets report.** Markets that report irregularly are understated. Grain bought
   directly by government agencies or traded outside APMCs is missing. Agmarknet widened its market
   coverage from November 2025, so recent arrivals are not comparable with earlier years.
@@ -103,10 +154,13 @@ re-capture a callback.
   used. Lot-wise trades and some reports need a login or captcha and are out of scope.
 - The market sample is every 6th day. Annual figures are sampled tonnes x 6, which is fine for
   ranking but approximate in level.
+- UPAG's latest crop year is an advance estimate; the redeploy risk of the Dash callbacks is noted above.
+- `analysis/` is not yet under ruff or unit tests (Phase 2).
 
-## Data licence and backup
+## Related repositories
+None required; the analysis posts are on [masaladeutsch](https://masaladeutsch.blogspot.com/).
 
-Code: MIT. Data: Government of India open data, re-published under GODL-India with attribution. See
-[`DATA_LICENSE.md`](DATA_LICENSE.md). Fields naming officials or giving phone numbers or emails are
-dropped. The GitHub repo is the primary copy of the data; the files are kept small (gzipped CSV, no
-Git LFS), and everything can be rebuilt from the source portals with the collectors above.
+## Licence
+Code: MIT (`LICENSE`). Data: Government of India open data, re-published under GODL-India with attribution; see
+[`DATA_LICENSE.md`](DATA_LICENSE.md). The GitHub repo is the primary copy of the data; files are kept small
+(gzipped CSV, no Git LFS) and everything can be rebuilt from the portals with the collectors above.
