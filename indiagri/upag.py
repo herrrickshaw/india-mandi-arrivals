@@ -9,13 +9,16 @@ Two public, unauthenticated backends:
 
 The official "Open API" (https://data.upag.gov.in/api/v1/...) needs OAuth2 login -> not used here.
 
-Run:  python3 -I upag_client.py  [outdir]   (one call per dataset, saves raw JSON to samples/)
+Run:  python3 -I -m indiagri.upag [outdir]   (one call per dataset, saves raw JSON; live network)
 """
+from __future__ import annotations
+
 import json
 import os
 import sys
 import time
 import urllib.request
+from typing import Any, Dict, Tuple
 
 UA = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 DASH = "https://dash.upag.gov.in/_dash-update-component"
@@ -23,20 +26,23 @@ API = "https://api-prd.upag.gov.in/v1/upagapi/"
 URL_SEARCH = "?t=&stateID=0&rtab=x&rtype=reports"
 
 
-def _post(url, body, timeout=180):
+def _post(url: str, body: Dict[str, Any], timeout: int = 180) -> bytes:
+    """POST a JSON body and return the raw response bytes."""
     req = urllib.request.Request(url, data=json.dumps(body).encode(),
                                  headers={**UA, "Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
 
-def _get(path, timeout=60):
+def _get(path: str, timeout: int = 60) -> bytes:
+    """GET a path under the public portal REST API and return the raw response bytes."""
     req = urllib.request.Request(API + path, headers=UA)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
 
-def dash_callback(output, filters_store_id, filters, with_url_state=True):
+def dash_callback(output: str, filters_store_id: str, filters: Dict[str, Any],
+                  with_url_state: bool = True) -> Tuple[bytes, Dict[str, Any]]:
     """Call one Dash callback whose single input is <filters_store_id>.data.
 
     `output` must be the exact multi-output string registered on the server
@@ -56,7 +62,8 @@ def dash_callback(output, filters_store_id, filters, with_url_state=True):
     return raw, json.loads(raw)["response"]
 
 
-def _rows(resp, store_id):
+def _rows(resp: Dict[str, Any], store_id: str) -> Any:
+    """Pull the tidy rows out of a Dash response for one output store."""
     return resp[store_id]["data"]
 
 
@@ -242,6 +249,6 @@ if __name__ == "__main__":
             first = rows[0] if isinstance(rows, list) and rows else rows
             print(f"OK   {name:34s} {len(rows):6d} rows {len(raw)/1e3:9.1f} kB {time.time()-t:5.1f}s  "
                   f"keys={list(first)[:8] if isinstance(first, dict) else type(first).__name__}")
-        except Exception as e:  # keep going so one broken report doesn't hide the rest
+        except Exception as e:  # noqa: BLE001 - keep going so one broken report does not hide the rest
             print(f"FAIL {name:34s} {type(e).__name__}: {e}")
         time.sleep(1)

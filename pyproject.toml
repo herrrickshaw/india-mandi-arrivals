@@ -1,0 +1,19 @@
+[project]
+name = "india-mandi-arrivals"
+version = "0.1.0"
+description = "Agmarknet mandi arrivals and UPAG crop statistics: stdlib collectors, extracts and insight tables"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+
+[tool.ruff]
+line-length = 140
+target-version = "py39"
+extend-exclude = ["analysis"]   # chart/workbook scripts are not yet linted (Phase 2)
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "BLE"]
+ignore = ["E702", "E701"]       # existing style uses `a; b` on one line in the collectors
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -6,11 +6,14 @@
 UPAG's reports are Plotly Dash pages; indiagri.upag calls their data callbacks directly (no login).
 Responses are cached under .cache/ so reruns only fetch what is missing. Be polite: one call at a time.
 """
+from __future__ import annotations
+
 import pathlib
 import sys
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from indiagri import transform as tf           # noqa: E402
 from indiagri import upag                      # noqa: E402
 from indiagri.io import cached, write_rows     # noqa: E402
 
@@ -21,7 +24,7 @@ def call(name, fn, *a, **k):
             try:
                 time.sleep(1.0)
                 return fn(*a, **k)[1]
-            except Exception as e:                     # transient 5xx / timeouts
+            except Exception as e:  # noqa: BLE001 - any transient failure is retried, then logged and skipped
                 if i == 3:
                     print(f"  {name}: failed ({str(e)[:100]})"); return []
                 time.sleep(10 * (i + 1))
@@ -66,12 +69,7 @@ def fci(_=None):
             r = call(f"fci_{crop}_{yr}", upag.fci_procurement, year=yr, marketing_season=ms, season=season, crop=crop)
             print(f"fci {crop} {yr}: {len(r)}"); rows += r
     # keep year rows only (the report also returns "% Change in ..." summary rows), one row per state-crop-year
-    seen, keep = set(), []
-    for x in rows:
-        k = (x.get("statename"), x.get("cropname"), x.get("years"))
-        if str(x.get("years", "")).startswith("%") or k in seen:
-            continue
-        seen.add(k); keep.append(x)
+    keep = tf.dedupe_fci(rows)
     print("fci_procurement:", write_rows("upag/fci_procurement.csv.gz", keep))
 
 

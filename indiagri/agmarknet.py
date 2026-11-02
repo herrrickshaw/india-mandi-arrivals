@@ -8,8 +8,10 @@ Rules baked in:
 Endpoints that return 403 "Authorization header missing" or 400
 "TOKEN_OR_CAPTCHA_REQUIRED" are deliberately NOT wrapped.
 
-Run `python3 -I agmarknet_client.py [samples_dir]` for a one-call-per-endpoint smoke test.
+Run `python3 -I -m indiagri.agmarknet [samples_dir]` for a one-call-per-endpoint smoke test.
 """
+from __future__ import annotations
+
 import json
 import os
 import sys
@@ -18,6 +20,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import Any, Dict, Optional
 
 BASE = "https://api.agmarknet.gov.in/v1/"
 UA = "Mozilla/5.0"
@@ -30,12 +33,15 @@ _last = [0.0]
 
 
 class AgmError(RuntimeError):
-    def __init__(self, status, body, url):
+    """HTTP failure from the Agmarknet API (status -1 = network error); carries status, body and url."""
+
+    def __init__(self, status: int, body: str, url: str) -> None:
         super().__init__(f"HTTP {status} for {url}: {body[:200]!r}")
         self.status, self.body, self.url = status, body, url
 
 
-def _throttle():
+def _throttle() -> None:
+    """Block until MIN_INTERVAL seconds have passed since the previous request (process-wide)."""
     with _lock:
         wait = MIN_INTERVAL - (time.monotonic() - _last[0])
         if wait > 0:
@@ -43,7 +49,7 @@ def _throttle():
         _last[0] = time.monotonic()
 
 
-def request(method, path, params=None, body=None, raw=False):
+def request(method: str, path: str, params: Optional[Dict[str, Any]] = None, body: Any = None, raw: bool = False) -> Any:
     """Low-level call. Returns parsed JSON, or (bytes, content_type) if raw=True."""
     url = BASE + path.lstrip("/")
     if params:
