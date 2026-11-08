@@ -1,5 +1,7 @@
 # india-mandi-arrivals
 
+> **Analyses built on this data (masaladeutsch):** [Winter harvest vs monsoon](https://masaladeutsch.blogspot.com/2026/10/indias-winter-harvest-now-outgrows-its.html) · [Sixteen crops, twenty years](https://masaladeutsch.blogspot.com/2026/10/sixteen-crops-twenty-years-where-indias.html) · [Farm map in seven charts](https://masaladeutsch.blogspot.com/2026/10/indias-farm-map-in-seven-charts-maize.html)
+
 Open extracts of India's agricultural **mandi arrivals and prices** (Agmarknet) joined with official
 **crop area, production, yield, MSP, procurement, prices and trade** (UPAG). Every dataset here is
 pulled from public, login-free endpoints of the two government portals by small, resumable,
