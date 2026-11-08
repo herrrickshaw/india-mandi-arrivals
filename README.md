@@ -2,6 +2,8 @@
 
 > **Analyses built on this data (masaladeutsch):** [Winter harvest vs monsoon](https://masaladeutsch.blogspot.com/2026/10/indias-winter-harvest-now-outgrows-its.html) · [Sixteen crops, twenty years](https://masaladeutsch.blogspot.com/2026/10/sixteen-crops-twenty-years-where-indias.html) · [Farm map in seven charts](https://masaladeutsch.blogspot.com/2026/10/indias-farm-map-in-seven-charts-maize.html)
 
+> **Related:** [Agri commodity tracker how-to](https://masaladeutsch.blogspot.com/2026/10/how-to-use-agri-commodity-tracker-india.html) · [Video on YouTube](https://www.youtube.com/watch?v=0P80NVYwPCM) (mandi prices and agriculture panel)
+
 Open extracts of India's agricultural **mandi arrivals and prices** (Agmarknet) joined with official
 **crop area, production, yield, MSP, procurement, prices and trade** (UPAG). Every dataset here is
 pulled from public, login-free endpoints of the two government portals by small, resumable,
