@@ -62,7 +62,7 @@ notes = [
  f"Volatility = median absolute month-on-month price change (the typical monthly move, up or down), months from {START} to Oct 2026 where both months are present. The median is used so that a single misreported month cannot dominate. A state-month with under {MIN_T} t of arrivals is dropped as unreliable.",
  "Price range = 95th-percentile monthly price / 5th-percentile monthly price - 1, same window (trims the most extreme months). Arrivals = total over the last 12 months (Nov 2025 to Oct 2026).",
  "Pairs are kept with 24+ monthly price changes and 5,000+ t of arrivals in the last 12 months. All-India = arrival-weighted average of state prices.",
- "Caveats: Agmarknet widened its market coverage from Nov 2025, so recent arrivals are higher than earlier years for every crop. Prices mix varieties and grades within a crop. Oct 2026 runs to 23 Oct.",
+ "Caveats: Agmarknet widened its market coverage from Nov 2025, so recent arrivals are higher than earlier years for every crop. Prices mix varieties and grades within a crop. Data through 31 Oct 2026 (refreshed 12 Nov 2026).",
 ]
 for i, t in enumerate(notes):
     c = ws.cell(3 + i, 1, t); c.font = BLACK; c.alignment = Alignment(wrap_text=True)

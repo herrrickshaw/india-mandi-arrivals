@@ -15,7 +15,7 @@ Retrieval dates: collectors run 2026-10-24/25 (see git history).
 - Fields: month, commodity_id, commodity, group, state, arrivals_t (tonnes), price_rs_qtl (weighted average Rs/quintal);
   market sample: date, commodity, state, district, market, mkt_id, arrival_t, modal_price_rs_qtl; masters: id/name lists and
   the market directory (name, category, institutional address, status).
-- Coverage: state_monthly Jan 2019-Oct 2026 (455 commodities, 32 states, 203,798 rows of which 156,912 non-empty);
+- Coverage: state_monthly Jan 2019-Oct 2026, through 31 Oct (458 commodities, 32 states, 203,865 rows of which 156,967 non-empty);
   market sample 2025-11-01..2026-10-21 every 6th day (60 dates), 23 field crops, 3,108 markets.
 - Refresh: manual; `collectors/agmarknet_collect.py state-monthly`, ~1 h at one request per 1.5 s.
 - Caveats: arrivals are what markets report; irregular reporters understated; coverage widened from Nov 2025 so arrivals
