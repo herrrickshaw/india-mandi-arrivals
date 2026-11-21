@@ -1,6 +1,7 @@
 """Crop ranking workbook: state-wise mandi arrivals and price volatility for 23 crops (Agmarknet).
 
-Usage: python analysis/workbooks/crop_ranking.py <out.xlsx> <results.json>
+Usage: python analysis/workbooks/crop_ranking.py <out.xlsx> <results.json> [--end YYYY-MM]
+--end drops months after it; use it to keep a partial current month out of the 12-month arrivals window.
 Reads data/agmarknet/state_monthly.csv.gz for the 23 field crops in crosswalks/commodity_crosswalk.csv.
 Wide sheets (one column per crop-state pair) hold prices and arrivals as data; Returns and Ranking are formulas.
 results.json carries the Python cross-check of the same metrics for charting.
@@ -13,6 +14,7 @@ from openpyxl.utils import get_column_letter as L
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT, RES = sys.argv[1:3]
+END = sys.argv[sys.argv.index("--end") + 1] if "--end" in sys.argv else None
 CORE = {r["agmarknet_commodity"] for r in csv.DictReader(open(ROOT / "crosswalks/commodity_crosswalk.csv"))}
 F = "Arial"; BLUE = Font(name=F, color="0000FF"); BLACK = Font(name=F); BOLD = Font(name=F, bold=True)
 H1 = Font(name=F, bold=True, size=13); HDR = Font(name=F, bold=True, color="FFFFFF"); HFILL = PatternFill("solid", fgColor="1F4E78")
@@ -22,6 +24,8 @@ MIN_T, START = 50, "2023-01"
 data = collections.defaultdict(dict)   # (crop, state) -> month -> (price, arrivals)
 for r in csv.DictReader(gzip.open(ROOT / "data/agmarknet/state_monthly.csv.gz", "rt", encoding="utf-8")):
     a = float(r["arrivals_t"] or 0)
+    if END and r["month"] > END:
+        continue
     if r["commodity"] in CORE and r["price_rs_qtl"] and a >= MIN_T:
         data[(r["commodity"], r["state"])][r["month"]] = (float(r["price_rs_qtl"]), a)
 months = sorted({m for v in data.values() for m in v}); N = len(months)

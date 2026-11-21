@@ -27,7 +27,7 @@ Each file below is the one authoritative copy of that dataset in this repo; ther
 
 | File | Source / report | Grain | Coverage |
 |---|---|---|---|
-| `data/agmarknet/state_monthly.csv.gz` | Agmarknet `statewise_price_arrival_sp` | commodity x state x month: weighted-average price (Rs/qtl) and arrivals (t) | 458 commodities reported in the window, Jan 2019 – Oct 2026 (203,865 rows) |
+| `data/agmarknet/state_monthly.csv.gz` | Agmarknet `statewise_price_arrival_sp` | commodity x state x month: weighted-average price (Rs/qtl) and arrivals (t) | 459 commodities reported in the window, Jan 2019 – Nov 2026, November to the 20th only (206,267 rows) |
 | `data/agmarknet/market_daily_sample.csv.gz` | Agmarknet `market_details_sp` | market x commodity x day: arrivals (t), modal price | 23 field crops, every 6th day, Nov 2025 – Oct 2026 (60 days) |
 | `data/agmarknet/masters/*.csv.gz` | Agmarknet master lists | commodities (605), groups, grades, units, varieties (2,154), states, districts (750), markets (4,175), market directory (4,906 with address and category) | current |
 | `data/upag/apy_state.csv.gz` | UPAG `statewiseapy` | state x season x crop x crop year: area, production, yield | 1997-98 – 2025-26 (latest = advance estimates) |
