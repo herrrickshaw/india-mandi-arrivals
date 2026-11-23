@@ -1,0 +1,9 @@
+[run]
+source = indiagri, collectors, analysis
+omit =
+    tests/*
+    */conftest.py
+    */test_*.py
+
+[report]
+show_missing = True
