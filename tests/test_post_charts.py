@@ -9,7 +9,7 @@ from conftest import run_script
 
 AI_CROPS = ["Rice", "Wheat", "Maize", "Gram", "Tur", "Soybean", "Rapeseed & Mustard", "Groundnut", "Cotton", "Total Food Grains", "Cereals"]
 STATES = ["Punjab", "Haryana", "Bihar", "Jammu And Kashmir"]
-NUMPY2 = int(np.__version__.split(".")[0]) >= 2
+NUMPY2 = tuple(int(x) for x in np.__version__.split(".")[:2]) >= (2, 3)   # 2-D np.cross: deprecated in 2.0, error from 2.3
 MAP_CROPS = ["Rice", "Wheat", "Maize", "Total Pulses", "Total Oil Seeds", "Cotton"]
 
 
@@ -145,7 +145,7 @@ def test_douglas_peucker_short_inputs_are_returned_unchanged(ran):
 
 
 @pytest.mark.xfail(NUMPY2, strict=True, raises=ValueError,
-                   reason="np.cross on 2-D vectors was removed in NumPy 2.0; requirements.txt allows numpy>=1.24")
+                   reason="np.cross on 2-D vectors raises from NumPy 2.3 (deprecated since 2.0); requirements.txt allows numpy>=1.24")
 def test_douglas_peucker_keeps_corners_and_drops_collinear_points(ran):
     _, _, g = ran
     line = [(0, 0), (1, 0.01), (2, 0), (3, 0)]
