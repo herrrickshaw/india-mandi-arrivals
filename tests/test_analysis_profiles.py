@@ -191,3 +191,92 @@ def test_pct_helper_signs(charts):
     _, g = charts
     assert g["pct"](0.025) == "+2.5%" and g["pct"](-0.025) == "-2.5%"
     assert g["nm"]("Rapeseed & Mustard") == "Mustard" and g["nm"]("Wheat") == "Wheat"
+
+
+# ----------------------------------------------------------------------------- crop_charts geometry
+def _els(path, tag):
+    root = ET.fromstring(path.read_text())
+    return [e for e in root.iter() if e.tag.endswith("}" + tag)]
+
+
+def _f(e, k):
+    return float(e.get(k))
+
+
+def test_volatility_bars_are_stacked_by_row_and_scaled_by_swing(charts, proot):
+    out, _ = charts
+    v = rd(proot, "crop_profiles.csv").sort_values("typical_yoy_swing")
+    sc = (720 - 120 - 260) / 0.25
+    bars = [e for e in _els(out / "volatility.svg", "rect") if e.get("fill") == "#1c6e8c"]
+    assert len(bars) == len(v)
+    for i, (bar, swing) in enumerate(zip(bars, v["typical_yoy_swing"])):
+        assert _f(bar, "x") == 120 and _f(bar, "y") == pytest.approx(30 + i * 26 + 5)
+        assert _f(bar, "width") == pytest.approx(swing * sc, abs=0.06)
+
+
+def test_yield_gap_dumbbells_sit_on_the_linear_axis(charts, proot):
+    out, _ = charts
+    gp = rd(proot, "crop_state_yield_gaps.csv")
+    g = gp.assign(lo=gp["worst_yield"] / gp["national_yield"], hi=gp["best_yield"] / gp["national_yield"]).sort_values("hi")
+    X = lambda v: 120 + v / 3.0 * ((720 - 150) - 120)
+    lines = [e for e in _els(out / "yield_gap.svg", "line") if e.get("stroke-width") == "3"]
+    assert len(lines) == len(g)
+    for i, (ln, r) in enumerate(zip(lines, g.itertuples())):
+        assert _f(ln, "x1") == pytest.approx(X(r.lo), abs=0.06) and _f(ln, "x2") == pytest.approx(X(r.hi), abs=0.06)
+        assert _f(ln, "y1") == 30 + i * 30 + 12
+
+
+def test_concentration_markers_use_the_30_to_100_percent_axis(charts, proot):
+    out, _ = charts
+    c = rd(proot, "crop_profiles.csv").sort_values("top3_share")
+    X = lambda v: 130 + (v - 0.3) / 0.7 * ((720 - 170) - 130)
+    lines = [e for e in _els(out / "concentration.svg", "line") if e.get("stroke-width") == "2.5"]
+    assert len(lines) == len(c)
+    for i, (ln, r) in enumerate(zip(lines, c.itertuples())):
+        assert _f(ln, "x1") == pytest.approx(X(r.top3_share_2003_06), abs=0.06)
+        assert _f(ln, "x2") == pytest.approx(X(r.top3_share), abs=0.06)
+        assert _f(ln, "y1") == 30 + i * 28 + 10
+
+
+def test_decomposition_bars_start_at_zero_and_stack_same_sign_components(charts, proot):
+    out, _ = charts
+    p = rd(proot, "crop_profiles.csv").sort_values("production_growth_pa")
+    zero, sc = 120 + 230, 4200
+    rects = [e for e in _els(out / "decomposition.svg", "rect") if e.get("fill-opacity")]
+    assert len(rects) == 2 * len(p)
+    for i, r in enumerate(p.itertuples()):
+        a, yl = r.area_growth_pa, r.yield_growth_pa
+        area, yld = rects[2 * i], rects[2 * i + 1]
+        assert _f(area, "y") == 34 + i * 26 + 5 == _f(yld, "y")
+        assert _f(area, "x") == pytest.approx(zero + min(0, a) * sc, abs=0.06)
+        assert _f(area, "width") == pytest.approx(abs(a) * sc, abs=0.06)
+        start = a if (a >= 0) == (yl >= 0) else 0.0
+        lo, hi = sorted((zero + start * sc, zero + (start + yl) * sc))
+        assert _f(yld, "x") == pytest.approx(lo, abs=0.06) and _f(yld, "width") == pytest.approx(hi - lo, abs=0.06)
+
+
+def test_card_state_bars_are_30px_apart_and_scaled_to_the_top_share(charts, proot):
+    out, _ = charts
+    t = rd(proot, "crop_top_states.csv")
+    w = t[t["crop"] == "Wheat"].sort_values("rank")
+    bars = [e for e in _els(out / "card_wheat.svg", "rect") if e.get("fill") == "#adb5bd"]
+    assert len(bars) == len(w)
+    for i, (b, share) in enumerate(zip(bars, w["share"])):
+        assert _f(b, "x") == 520 and _f(b, "y") == 30 + i * 30 + 4
+        assert _f(b, "width") == pytest.approx(share / w["share"].max() * 150 * 0.62, abs=0.06)
+
+
+def test_state_tables_use_only_rows_of_their_own_crop(proot, capsys):
+    st = pd.read_csv(proot / "data/upag/apy_state.csv.gz")
+    extra = []
+    for cy in synth.crop_years(2023, 2025):
+        extra += [["Rajasthan", "Cotton", cy, "Total", "State", "Production", 500.0],
+                  ["Rajasthan", "Cotton", cy, "Total", "State", "Area", 100.0]]
+    st = pd.concat([st, pd.DataFrame(extra, columns=st.columns)])
+    synth.write_gz(proot / "data/upag/apy_state.csv.gz", list(st.columns), st.values.tolist())
+    run_script("analysis/crop_profiles.py", proot, name="__main__")
+    t = rd(proot, "crop_top_states.csv")
+    assert "Rajasthan" not in set(t[t["crop"] == "Wheat"]["state"])
+    cot = t[t["crop"] == "Cotton"].set_index("rank")
+    assert cot.loc[1, "state"] == "Rajasthan" and cot.loc[1, "production"] == 500.0
+    assert cot.loc[2, "state"] == "Punjab" and cot.loc[2, "production"] == 60

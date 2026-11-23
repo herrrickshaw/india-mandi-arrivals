@@ -216,3 +216,102 @@ def test_leaders_state_top_mandis_limited_to_twenty_states(leaders_root, tmp_pat
     ss = wb["State_Top_Mandis"]
     states = {ss.cell(r, 1).value for r in range(4, 4 + 100) if ss.cell(r, 1).value}
     assert len(states) == 20 and "State00" not in states and "State21" in states
+
+
+# ------------------------------------------------------------------ statewise_rice_maize
+LONG_MONTHS = [f"{y}-{m:02d}" for y in range(2019, 2027) for m in range(1, 13) if (y, m) <= (2026, 10)]      # 94 months
+
+
+def run_statewise(root, tmp_path, rows):
+    synth.write_gz(root / "data/agmarknet/state_monthly.csv.gz",
+                   ["month", "commodity_id", "commodity", "group", "state", "arrivals_t", "price_rs_qtl"], rows)
+    out = tmp_path / "s.xlsx"
+    g = run_script("analysis/workbooks/statewise_rice_maize.py", root, argv=[out])
+    return g, openpyxl.load_workbook(out)
+
+
+def sw_rows(com, state, months, arr, price):
+    return [[m, 1, com, "g", state, arr(m), price(m)] for m in months]
+
+
+@pytest.fixture
+def sw(root, tmp_path):
+    last12 = LONG_MONTHS[-12:]
+    rows = []
+    rows += sw_rows("Maize", "Big", LONG_MONTHS, lambda m: 600 if m in last12 else 10, lambda m: 2000 + LONG_MONTHS.index(m))
+    rows += sw_rows("Maize", "Edge", LONG_MONTHS[-60:], lambda m: 5000 / 12 if m in last12 else 1, lambda m: 1800)  # 60 months, 5000 t: kept
+    rows += sw_rows("Maize", "Short", LONG_MONTHS[-59:], lambda m: 900, lambda m: 1700)                             # 59 months: dropped
+    rows += sw_rows("Maize", "Low", LONG_MONTHS, lambda m: 400 if m in last12 else 900, lambda m: 1600)             # 4800 t last 12m: dropped
+    rows += sw_rows("Rice", "Big", LONG_MONTHS, lambda m: 500, lambda m: 3000)
+    rows += sw_rows("Rice", "Other", LONG_MONTHS, lambda m: 450, lambda m: 1000)
+    rows += [["2026-10", 1, "Rice", "g", "NoPrice", 9999, ""], ["2026-10", 1, "Wheat", "g", "Big", 9999, 5]]    # ignored
+    return run_statewise(root, tmp_path, rows) + (rows,)
+
+
+def test_statewise_keeps_states_with_60_months_and_5000_tonnes_ordered_by_arrivals(sw, capsys):
+    g, wb, _ = sw
+    assert g["states"]["Maize"] == ["All India", "Big", "Edge"]
+    assert g["states"]["Rice"] == ["All India", "Big", "Other"]          # 6000 t then 5400 t
+    assert "Broken Rice" not in g["states"] or g["states"]["Broken Rice"] == ["All India"]
+    p = wb["Maize_Price"]
+    assert [p.cell(3, c).value for c in range(1, 7)] == ["Month", "Year", "Mo", "All India", "Big", "Edge"]
+    assert p["A4"].value == "2019-01" and p["A97"].value == "2026-10" and p["A98"].value is None
+
+
+def test_statewise_all_india_price_is_arrival_weighted_and_rounded(sw):
+    _, wb, _ = sw
+    p = wb["Rice_Price"]
+    k = LONG_MONTHS.index("2026-10")
+    assert p.cell(4 + k, 4).value == pytest.approx((500 * 3000 + 450 * 1000) / 950, abs=0.05)                  # All India
+    assert p.cell(4 + k, 5).value == 3000 and p.cell(4 + k, 6).value == 1000
+    mz = wb["Maize_Price"]
+    assert mz.cell(4, 5).value == 2000.0                                                              # Big, 2019-01
+    assert mz.cell(4, 4).value == pytest.approx((10 * 2000 + 900 * 1600) / 910, abs=0.05)            # Big + Low report that month
+
+
+def test_statewise_arrivals_are_real_numbers_not_zeroed(sw):
+    _, wb, _ = sw
+    a = wb["Maize_Arrivals"]
+    assert a.cell(97, 2).value == 600 + round(5000 / 12) + 900 + 400                         # All India sums every state incl. the dropped ones
+    assert a.cell(97, 3).value == 600 and a.cell(4, 3).value == 10
+
+
+def test_statewise_input_defaults_and_notes(sw):
+    _, wb, _ = sw
+    i = wb["Inputs"]
+    assert [(i.cell(r, 1).value, i.cell(r, 2).value) for r in range(4, 10)] == [
+        ("rent", 10), ("interest", 0.105), ("shrink", 0.001), ("hold", 6), ("dip", 0.85), ("season_to", "2025-12")]
+    assert i["D8"].value == "A month is a dip when price <= this x trailing 12-month mean"
+    assert "net of rent, interest and shrinkage" in wb["Summary"]["A2"].value
+    assert wb["Summary"]["A3"].value == "Commodity"
+
+
+def test_statewise_every_cell_is_arial_and_all_india_rows_are_bold(sw):
+    _, wb, _ = sw
+    assert all(c.font.name == "Arial" for ws in wb.worksheets for row in ws.iter_rows() for c in row if c.value is not None)
+    for name in ("Seasonality", "Summary"):
+        ws = wb[name]
+        rows = [(ws.cell(r, 2).value, ws.cell(r, 2).font.bold) for r in range(4, 14) if ws.cell(r, 2).value]
+        assert rows and all(bold == (st == "All India") for st, bold in rows)
+        assert any(st == "All India" for st, _ in rows)
+    sm = wb["Summary"]
+    assert [sm.cell(r, 2).value for r in range(4, 7)] == ["All India", "Big", "Edge"]
+
+
+def test_statewise_carry_and_dip_formulas_reference_the_inputs(sw):
+    _, wb, _ = sw
+    c = wb["Maize_Carry"]
+    assert c["B4"].value.startswith("=IF(OR('Maize_Price'!D4=\"\",ROW()-3+Inputs!$B$7>94)")
+    assert "Inputs!$B$6*(Inputs!$B$4+'Maize_Price'!D4*Inputs!$B$5/12+'Maize_Price'!D4*Inputs!$B$6)" not in c["B4"].value
+    assert "Inputs!$B$7*(Inputs!$B$4+'Maize_Price'!D4*Inputs!$B$5/12+'Maize_Price'!D4*Inputs!$B$6)" in c["B4"].value
+    dip = c.cell(16, 6)                                                                              # month index 12 -> first dip formula
+    assert dip.value.startswith("=IF(OR('Maize_Price'!D16=\"\",COUNT('Maize_Price'!D4:D15)<9)")
+    assert "'Maize_Price'!D16<=Inputs!$B$8*AVERAGE('Maize_Price'!D4:D15)" in dip.value
+    assert c.cell(15, 6).value is None                                                               # no dip test before 12 months of history
+
+
+def test_ranking_counts_the_change_into_the_start_month(root, tmp_path):
+    months = ["2022-11", "2022-12"] + synth.MONTHS                                  # two months of history before START (2023-01)
+    monthly(root, {("Wheat", "A"): (lambda k: 1000, lambda k: 1000 + 10 * k)}, months=months)
+    _, _, res = run_rank(root, tmp_path)
+    assert res["res"]["Wheat|A"]["n"] == 46                                         # 2023-01 .. 2026-10, each vs its predecessor

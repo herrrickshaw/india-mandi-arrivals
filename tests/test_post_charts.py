@@ -252,3 +252,59 @@ def test_crowded_labels_fall_back_to_offset_positions_with_leader_lines(tmp_path
     member_lines = [l for l in cm.splitlines() if 'font-size="11" fill="#6c757d"' in l and "Pradesh" in l]
     assert len(member_lines) >= 2                              # the member list wraps at ~46 characters
     assert all(len(ET.fromstring(l).text) <= 46 + 20 for l in member_lines)
+
+
+# ----------------------------------------------------------------------------- geometry / mapping assertions
+def _svg_els(path, tag):
+    return [e for e in ET.fromstring(path.read_text()).iter() if e.tag.endswith("}" + tag)]
+
+
+def test_yield_panels_show_yield_values_scaled_to_108_percent_of_the_series_max(ran):
+    _, out, _ = ran
+    svg = (out / "yields.svg").read_text()
+    rice_yield_2025 = 800.0 + 0 * 50 + (2025 - 1966) * 20                      # ci=0 -> Rice, the first panel
+    assert f"2025-26: {rice_yield_2025:,.0f} kg/ha" in svg                     # Yield rows, not Area rows
+    first = _svg_els(out / "yields.svg", "polyline")[0]
+    ys = [float(p.split(",")[1]) for p in first.get("points").split()]
+    y0, y1 = 26, 140 - 20                                                      # first panel: cy = 0
+    assert min(ys) == pytest.approx(y1 - (y1 - y0) / 1.08, abs=0.06)           # series max sits at 1/1.08 of the plot height
+    assert max(ys) == pytest.approx(y1 - (800.0 / (rice_yield_2025 * 1.08)) * (y1 - y0), abs=0.06)
+
+
+def test_mappaths_projection_is_equirectangular_with_cos_22_longitude_scaling(ran):
+    import math
+    _, _, g = ran
+    w, h, pad = 200, 200, 6
+    p = g["mappaths"](w, h, pad=pad, eps=0.0)
+    k = math.cos(math.radians(22))
+    lon0, lon1, lat0, lat1 = 74.0, 88.0, 25.0, 37.0                            # extent of the non-island test states
+    s = min((w - 2 * pad) / ((lon1 - lon0) * k), (h - 2 * pad) / (lat1 - lat0))
+    ox = pad + ((w - 2 * pad) - (lon1 - lon0) * k * s) / 2
+    first = p["Bihar"].split("L")[0]                                          # Bihar square starts at lon 84, lat 25
+    x, y = (float(v) for v in first[1:].split(","))
+    assert x == pytest.approx((84 - lon0) * k * s + ox, abs=0.06)
+    assert y == pytest.approx((lat1 - 25) * s + pad, abs=0.06)
+
+
+def test_price_cluster_legend_is_two_columns_300px_apart(ran):
+    _, out, _ = ran
+    names = ("very volatile perishables", "volatile vegetables", "steady, traded year-round", "harvest-bunched field crops")
+    texts = [e for e in _svg_els(out / "price_clusters.svg", "text") if e.text in names]
+    xs = sorted({float(e.get("x")) for e in texts})
+    ys = sorted({float(e.get("y")) for e in texts})
+    assert len(xs) == 2 and xs[1] - xs[0] == 300
+    assert len(ys) == 2 and ys[1] - ys[0] == 18
+
+
+def test_season_heat_cells_sit_in_their_calendar_month_column(ran):
+    _, out, g = ran
+    a2 = g["a2"]
+    cells = [e for e in _svg_els(out / "season_heat.svg", "text") if e.get("font-size") == "10.5"]
+    got = {(float(e.get("x")), float(e.get("y"))): e.text for e in cells}
+    assert got
+    for i, c in enumerate(g["keep"]):
+        sub = a2[a2["commodity"] == c]
+        idx = sub.groupby("mo")["p"].mean() / sub["p"].mean()
+        y = 40 + i * 22 + 14
+        for mo, val in idx.items():
+            assert got[(96 + (mo - 1) * 46 + 46 / 2 - 1, y)] == f"{val:.2f}"
